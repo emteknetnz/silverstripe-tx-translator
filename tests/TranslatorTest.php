@@ -14,7 +14,7 @@ class TranslatorTest extends TestCase
     /**
      * @dataProvider provideJsonEncode
      * */
-    public function testJsonEncode(mixed $data, string $expected): void
+    public function testJsonEncode($data, string $expected): void
     {
         if ($expected === self::INVALID) {
             $this->expectException(LogicException::class);
@@ -59,7 +59,7 @@ class TranslatorTest extends TestCase
     /**
      * @dataProvider provideJsonDecode
      */
-    public function testJsonDecode(string $jsonString, mixed $expected): void
+    public function testJsonDecode(string $jsonString, $expected): void
     {
         if ($expected === self::INVALID) {
             $this->expectException(LogicException::class);
@@ -140,7 +140,7 @@ class TranslatorTest extends TestCase
         ];
     }
 
-    private function invokeMethod(string $methodName, mixed ...$args): mixed
+    private function invokeMethod(string $methodName, ...$args)
     {
         $translator = new Translator();
         $method = new ReflectionMethod($translator, $methodName);

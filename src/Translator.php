@@ -143,6 +143,19 @@ class Translator
                 if (!file_exists("$modulePath/.tx/config")) {
                     continue;
                 }
+                // see if the current "branch" is actually a tag that's been checked out,
+                // rather than a minor or next minor branch
+                // if so, try to git checkout the what the minor branch for the tag should be
+                // read all branches rather than just using `git rev-parse --abbrev-ref HEAD` so that
+                // tags aren't just reported as "HEAD", instead they are "(HEAD detached at 3.0.2)"
+                $branches = $this->exec('git branch', $modulePath);
+                // the current branch will be prefixed with a *, extract what the branch is with a regex
+                preg_match("#(^|\n)\* (.+?)(\n|$)#", $branches, $matches);
+                $branch = $matches[2] ?? 'invalid';
+                if (preg_match('#^\(HEAD detached at ([0-9]+\.[0-9]+)\.[0-9]+\)$#', $branch, $matches)) {
+                    $newBranch = $matches[1];
+                    $this->exec("git checkout $newBranch", $modulePath);
+                }
                 $branch = $this->exec('git rev-parse --abbrev-ref HEAD', $modulePath);
                 if (!is_numeric($branch)) {
                     throw new RuntimeException("Branch $branch in $modulePath is not a minor or next-minor branch");
@@ -213,6 +226,7 @@ class Translator
     private function transifexPullSource()
     {
         foreach ($this->modulePaths as $modulePath) {
+            $this->log("Pulling translations for $modulePath");
             // ensure .tx/config is up to date
             $contents = file_get_contents("$modulePath/.tx/config");
             if (strpos($contents, '[o:') === false) {
@@ -429,6 +443,8 @@ class Translator
     {
         $this->log("Running $command");
         $process = Process::fromShellCommandline($command, $cwd);
+        // set a timeout of 5 minutes - tx pull operations may take a long time
+        $process->setTimeout(300);
         $process->run();
         if (!$process->isSuccessful()) {
             throw new ProcessFailedException($process);
